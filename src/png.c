@@ -3,20 +3,12 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
+#include <math.h>
 
 #define MEM_CHECK(ptr) if(ptr == NULL) { perror("Unable to allocate memory.");\
                                             return false; }
 #define FEOF_CHECK(file) if(feof(file)) { perror("Unexpected end of file.");\
                                             return false; }
-
-typedef struct {
-    char * filename;
-    IHDR * ihdr;
-    PLTE * plte;
-    IDAT * idat;
-    IEND * iend;
-    unsigned int num_idat_chunks;
-} structPNG;
 
 typedef struct {
     unsigned int width;
@@ -46,16 +38,26 @@ typedef struct {
     unsigned long crc;
 } structIEND;
 
-typedef structPNG * PNG;
 typedef structIHDR * IHDR;
 typedef structPLTE * PLTE;
 typedef structIDAT * IDAT;
 typedef structIEND * IEND;
 
+typedef struct {
+    char * filename;
+    IHDR * ihdr;
+    PLTE * plte;
+    IDAT * idat;
+    IEND * iend;
+    unsigned int num_idat_chunks;
+} structPNG;
+
+typedef structPNG * PNG;
+
 #define PNG_IMPL
 #include "png.h"
 
-bool is_png_header(char * header) {
+bool is_png_header(const char * header) {
     if(header == NULL || sizeof(header) != 8 ||\
                 memcmp(header, PNG_HEADER, 8) != 0)
         return false;
@@ -63,7 +65,7 @@ bool is_png_header(char * header) {
     return true;
 }
 
-bool is_idhr_header(char * header) {
+bool is_idhr_header(const char * header) {
     if(header == NULL || sizeof(header) != 4 ||\
                 memcmp(header, IHDR_HEADER, 4) != 0)
         return false;
@@ -71,7 +73,7 @@ bool is_idhr_header(char * header) {
     return true;
 }
 
-bool is_plte_header(char * header) {
+bool is_plte_header(const char * header) {
     if(header == NULL || sizeof(header) != 4 ||\
                 memcmp(header, PLTE_HEADER, 4) != 0)
         return false;
@@ -79,7 +81,7 @@ bool is_plte_header(char * header) {
     return true;
 }
 
-bool is_idat_header(char * header) {
+bool is_idat_header(const char * header) {
     if(header == NULL || sizeof(header) != 4 ||\
                 memcmp(header, IDAT_HEADER, 4) != 0)
         return false;
@@ -87,7 +89,7 @@ bool is_idat_header(char * header) {
     return true;
 }
 
-bool is_iend_header(char * header) {
+bool is_iend_header(const char * header) {
     if(header == NULL || sizeof(header) != 4 ||\
                 memcmp(header, IEND_HEADER, 4) != 0)
         return false;
@@ -101,7 +103,7 @@ bool read_ihdr(PNG * png, FILE * file, int length) {
         return false;
     }
 
-    sIHDR ihdr = malloc(sizeof(structIHDR));
+    IHDR ihdr = malloc(sizeof(structIHDR));
     MEM_CHECK(ihdr);
 
     for(int i = 3; i >= 0; i--) {
@@ -114,7 +116,7 @@ bool read_ihdr(PNG * png, FILE * file, int length) {
         FEOF_CHECK(file);
     }
 
-    if(width == 0 || height == 0 || width > 0x80000000 || height > 0x80000000) {
+    if(ihdr->width == 0 || ihdr->height == 0 || ihdr->width > 0x80000000 || ihdr->height > 0x80000000) {
         perror("Invalid image dimensions.");
         return false;
     }
@@ -165,7 +167,7 @@ bool read_ihdr(PNG * png, FILE * file, int length) {
         FEOF_CHECK(file);
     }
 
-    (*png)->ihdr = ihdr;
+    (*png)->ihdr = &ihdr;
     return true;
 }
 
@@ -192,13 +194,11 @@ bool read_plte(PNG * png, FILE * file, int length) {
         FEOF_CHECK(file);
     }
 
-    (*png)->plte = plte;
+    (*png)->plte = &plte;
     return true;
 }
 
 bool read_idat(PNG * png, FILE * file, int length) {
-    if(length < 4 || )
-
     IDAT idat = malloc(sizeof(structIDAT));
     MEM_CHECK(idat);
 
@@ -223,7 +223,7 @@ bool read_idat(PNG * png, FILE * file, int length) {
     return true;
 }
 
-bool read_iend(PNG * png, FILE * file) {
+bool read_iend(PNG * png, FILE * file, int length) {
     IEND iend = malloc(sizeof(structIEND));
     MEM_CHECK(iend);
 
@@ -232,7 +232,7 @@ bool read_iend(PNG * png, FILE * file) {
         FEOF_CHECK(file);
     }
 
-    (*png)->iend = iend;
+    (*png)->iend = &iend;
     return true;
 }
 
@@ -278,34 +278,70 @@ bool png_read_direct(PNG * png, FILE * file) {
         if(is_idhr_header(chunk_type)) {
             if(!read_ihdr(png, file, chunk_size))
                 return false;
-        } else if(is_idat_header(chunkType)) {
+        } else if(is_idat_header(chunk_type)) {
             if(!read_idat(png, file, chunk_size))
                 return false;
         }
-    } while(!feof(file))
+    } while(!feof(file));
+    return true;
 }
 
 bool png_read_bitmap(PNG * png, FILE * file) {
-
+    return false;
 }
 
-plte_write_direct(PNG * png, FILE * file) {
+bool plte_write_direct(PNG * png, FILE * file) {
     if((*png)->plte == NULL)
         return false;
     
-    fprintf(file, "\x00\x00\x00\x07PLTE");
-    fprintf(file, "%c%c%c", (*png)->plte->red, (*png)->plte->green, (*png)->plte->blue);
-    fprintf(file, "%c%c%c%c", (*png)->plte->crc >> 24, (*png)->plte->crc >> 16, (*png)->plte->crc >> 8, (*png)->plte->crc);
+    char zero = 0;
+    fprintf(file, "%c%c%cx07%s", zero, zero, zero, PLTE_HEADER);
+    fprintf(file, "%c%c%c", (*(*png)->plte)->red, (*(*png)->plte)->green, (*(*png)->plte)->blue);
+    for(int i = 1; i < 4; i++)
+        fprintf(file, "%c", ((int) ((*(*png)->plte)->crc / pow(256, 3 - i))) % 256);
+    return true;
+}
+
+bool idat_write_direct(PNG * png, FILE * file) {
+    if((*png)->idat == NULL)
+        return false;
+    
+    for(int i = 0; i < (*png)->num_idat_chunks; i++) {
+        int j;
+        for(j = 0; j < 4; j++)
+            fprintf(file, "%c", ((int) ((*png)->idat[i]->length / pow(256, 3 - j))) % 256);
+        fprintf(file, "%s", IDAT_HEADER);
+        for(j = 0; j < (*png)->idat[i]->length; j++)
+            fprintf(file, "%c", (*png)->idat[i]->data[j]);
+        for(j = 0; j < 4; j++)
+            fprintf(file, "%c", ((int) ((*png)->idat[i]->crc / pow(256, 3 - j))) % 256);
+    }
+    return true;
+}
+
+bool iend_write_direct(PNG * png, FILE * file) {
+    if((*png)->iend == NULL)
+        return false;
+    
+    char zero = 0;
+    fprintf(file, "%c%c%c%c%s", zero, zero, zero, zero, IEND_HEADER);
+    for(int i = 0; i < 4; i++)
+        fprintf(file, "%c", ((int) ((*(*png)->iend)->crc / pow(256, 3 - i))) % 256);
+    return true;
 }
 
 bool png_write_direct(PNG * png, FILE * file) {
-    fprintf(file, "\x89PNG\r\x0A\x1A\x0A");
+    fprintf(file, "%s", PNG_HEADER);
 
     plte_write_direct(png, file);
+    idat_write_direct(png, file);
+    iend_write_direct(png, file);
+
+    return true;
 }
 
 bool png_write_bitmap(PNG * png, FILE * file) {
-
+    return false;
 }
 
 void png_free(PNG * png) {

@@ -1,6 +1,10 @@
 #ifndef PNG_H
 #define PNG_H
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdbool.h>
+
 #define PNG_HEADER "\x89\x50\x4E\x47\x0D\x0A\x1A\x0A"
 #define IHDR_HEADER "\x49\x48\x44\x52"
 #define PLTE_HEADER "\x50\x4C\x54\x45"
@@ -17,10 +21,10 @@ bool is_plte_header(const char * header);
 bool is_idat_header(const char * header);
 bool is_iend_header(const char * header);
 
-bool read_ihdr(PNG * png, FILE * file);
-bool read_plte(PNG * png, FILE * file);
-bool read_idat(PNG * png, FILE * file);
-bool read_iend(PNG * png, FILE * file);
+bool read_ihdr(PNG * png, FILE * file, int length);
+bool read_plte(PNG * png, FILE * file, int length);
+bool read_idat(PNG * png, FILE * file, int length);
+bool read_iend(PNG * png, FILE * file, int length);
 
 PNG png_init();
 bool png_read_direct(PNG * png, FILE * file);

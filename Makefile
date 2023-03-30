@@ -3,12 +3,14 @@ CFLAGS=-Wall -Wextra -Werror -pedantic -std=c99
 PATH=src
 SRCS=$(wildcard $(PATH)/*.c)
 
-$(PATH)/fcc.o: $(SRCS)
-	$(CC) $(PATH)/ffc.c -c -o $(PATH)/ffc.o $(CFLAGS)
-
 fcc: $(PATH)/fcc.o
-	$(CC) $(PATH)/ffc.o -o ffc $(CFLAGS)
+	$(CC) -o ffc $(CFLAGS) $(PATH)/ffc.o
+
+$(PATH)/fcc.o: $(PATH)/png.o
+	$(CC) $(CFLAGS) -c -o $(PATH)/ffc.o $(PATH)/ffc.c
 
 clean:
-	rm -f ffc
-	rm -f $(PATH)/*.o
+	/bin/rm -f $(PATH)/*.o
+
+realclean: clean
+	/bin/rm -f ffc
