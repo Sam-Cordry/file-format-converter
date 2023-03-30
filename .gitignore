@@ -1,0 +1,8 @@
+ffc
+.vscode/*
+test.*
+ffc.dSYM/*
+src/ffc.dSYM/*
+*.o
+*.out
+src/*.o
