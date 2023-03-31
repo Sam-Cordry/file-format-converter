@@ -11,26 +11,59 @@
 #define IDAT_HEADER "\x49\x44\x41\x54"
 #define IEND_HEADER "\x49\x45\x4E\x44"
 
-#ifndef PNG_IMPL
-typedef struct { } * PNG;
-#endif
+typedef struct {
+    unsigned int width;
+    unsigned int height;
+    unsigned int bit_depth;
+    char color_type;
+    char compression_method;
+    char filter_method;
+    char interlace_method;
+    unsigned long crc;
+} IHDR;
 
-bool is_png_header(const char * header);
-bool is_ihdr_header(const char * header);
-bool is_plte_header(const char * header);
-bool is_idat_header(const char * header);
-bool is_iend_header(const char * header);
+typedef struct {
+    char red;
+    char green;
+    char blue;
+    unsigned long crc;
+} PLTE;
 
-bool read_ihdr(PNG * png, FILE * file, int length);
-bool read_plte(PNG * png, FILE * file, int length);
-bool read_idat(PNG * png, FILE * file, int length);
-bool read_iend(PNG * png, FILE * file, int length);
+typedef struct {
+    char* data;
+    unsigned int length;
+    unsigned long crc;
+} IDAT;
 
-PNG png_init();
-bool png_read_direct(PNG * png, FILE * file);
-bool png_read_bitmap(PNG * png, FILE * file);
-bool png_write_direct(PNG * png, FILE * file);
-bool png_write_bitmap(PNG * png, FILE * file);
-void png_free(PNG * png);
+typedef struct {
+    unsigned long crc;
+} IEND;
+
+typedef struct {
+    char* filename;
+    IHDR* ihdr;
+    PLTE* plte;
+    IDAT* idat;
+    IEND* iend;
+    unsigned int num_idat_chunks;
+} PNG;
+
+bool is_png_header(const char* header);
+bool is_ihdr_header(const char* header);
+bool is_plte_header(const char* header);
+bool is_idat_header(const char* header);
+bool is_iend_header(const char* header);
+
+bool read_ihdr(PNG* png, FILE* file, int length);
+bool read_plte(PNG* png, FILE* file, int length);
+bool read_idat(PNG* png, FILE* file, int length);
+bool read_iend(PNG* png, FILE* file);
+
+PNG* png_create();
+bool png_read_direct(PNG* png, FILE* file);
+bool png_read_bitmap(PNG* png, FILE* file);
+bool png_write_direct(PNG* png, FILE* file);
+bool png_write_bitmap(PNG* png, FILE* file);
+void png_free(PNG* png);
 
 #endif
