@@ -15,28 +15,28 @@ typedef struct {
     unsigned int width;
     unsigned int height;
     unsigned int bit_depth;
-    char color_type;
-    char compression_method;
-    char filter_method;
-    char interlace_method;
-    unsigned long crc;
+    unsigned char color_type;
+    unsigned char compression_method;
+    unsigned char filter_method;
+    unsigned char interlace_method;
+    unsigned char crc[5];
 } IHDR;
 
 typedef struct {
-    char red;
-    char green;
-    char blue;
-    unsigned long crc;
+    unsigned char red;
+    unsigned char green;
+    unsigned char blue;
+    unsigned char crc[5];
 } PLTE;
 
 typedef struct {
-    char* data;
+    unsigned char* data;
     unsigned int length;
-    unsigned long crc;
+    unsigned char crc[5];
 } IDAT;
 
 typedef struct {
-    unsigned long crc;
+    unsigned char crc[5];
 } IEND;
 
 typedef struct {
@@ -60,10 +60,8 @@ bool read_idat(PNG* png, FILE* file, int length);
 bool read_iend(PNG* png, FILE* file);
 
 PNG* png_create();
-bool png_read_direct(PNG* png, FILE* file);
-bool png_read_bitmap(PNG* png, FILE* file);
-bool png_write_direct(PNG* png, FILE* file);
-bool png_write_bitmap(PNG* png, FILE* file);
+bool png_read(PNG* png, FILE* file);
+bool png_write(PNG* png, FILE* file);
 void png_free(PNG* png);
 
 #endif
