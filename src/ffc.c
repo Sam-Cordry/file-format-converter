@@ -4,6 +4,7 @@
 #include <stdbool.h>
 
 #include "png.h"
+#include "jpeg.h"
 
 bool is_valid_ext(char* extension) {
     return strcmp(extension, "png") == 0 || strcmp(extension, "bmp") == 0;
@@ -87,7 +88,7 @@ int main(int argc, char** argv) {
         return EXIT_FAILURE;
     }
 
-    char* end_extension = malloc(5 * sizeof(char));
+    char* end_extension = malloc(5);
     printf("What should the output file format be (png or bmp)? ");
     scanf("%s", end_extension);
 
@@ -96,7 +97,7 @@ int main(int argc, char** argv) {
         return EXIT_FAILURE;
     }
 
-    char* end_filename = malloc(81 * sizeof(char));
+    char* end_filename = malloc(81);
     printf("What should the output file be named? (Default: result.[extension])? ");
     scanf("%s", end_filename);
     if(strcmp(end_filename, "") == 0) {
@@ -123,6 +124,18 @@ int main(int argc, char** argv) {
             return EXIT_FAILURE;
         }
         png_free(png);
+    } else if(strcmp(extension, ".jpeg") == 0 || strcmp(extension, ".jpg")) {
+        JPEG* jpeg = jpeg_create();
+        if(!jpeg_read(jpeg, start_file)) {
+            printf("Error: Unable to read JPEG file.\n");
+            return EXIT_FAILURE;
+        }
+
+        end_file = fopen("result.jpeg", "w");
+        if(!jpeg_write(jpeg, end_file)) {
+            printf("Error: Unable to write JPEG file.\n");
+            return EXIT_FAILURE;
+        }
     }
 
     fclose(start_file);

@@ -5,12 +5,12 @@
 #include <stdbool.h>
 #include <math.h>
 
+#include "png.h"
+
 #define MEM_CHECK(ptr) if(ptr == NULL) { printf("Unable to allocate memory");\
                                             return false; }
 #define FEOF_CHECK(file) if(feof(file)) { printf("Unexpected end of file");\
                                             return false; }
-
-#include "png.h"
 
 bool is_png_header(const char* header) {
     return !(header == NULL || strlen(header) != 8 ||
@@ -37,6 +37,20 @@ bool is_iend_header(const char* header) {
                 memcmp(header, IEND_HEADER, 4) != 0);
 }
 
+PNG* png_create() {
+    PNG* png = malloc(sizeof(PNG));
+    if(png == NULL)
+        return NULL;
+    
+    png->ihdr = NULL;
+    png->plte = NULL;
+    png->idat = NULL;
+    png->iend = NULL;
+    png->num_idat_chunks = 0;
+
+    return png;
+}
+
 bool read_ihdr(PNG* png, FILE* file, int length) {
     if(length != 13) {
         printf("Invalid IHDR chunk length");
@@ -46,7 +60,7 @@ bool read_ihdr(PNG* png, FILE* file, int length) {
     png->ihdr = malloc(sizeof(IHDR));
     MEM_CHECK(png->ihdr);
 
-    IHDR * ihdr = png->ihdr;
+    IHDR* ihdr = png->ihdr;
 
     ihdr->width = 0;
 
@@ -117,7 +131,7 @@ bool read_ihdr(PNG* png, FILE* file, int length) {
     return true;
 }
 
-bool read_plte(PNG * png, FILE * file, int length) {
+bool read_plte(PNG* png, FILE* file, int length) {
     if(length != 3) {
         printf("Invalid PLTE chunk length");
         return false;
@@ -126,7 +140,7 @@ bool read_plte(PNG * png, FILE * file, int length) {
     png->plte = malloc(sizeof(PLTE));
     MEM_CHECK(png->plte);
 
-    PLTE * plte = png->plte;
+    PLTE* plte = png->plte;
 
     plte->red = fgetc(file);
     FEOF_CHECK(file);
@@ -146,17 +160,17 @@ bool read_plte(PNG * png, FILE * file, int length) {
     return true;
 }
 
-bool read_idat(PNG * png, FILE * file, int length) {
+bool read_idat(PNG* png, FILE* file, int length) {
     if(png->num_idat_chunks == 0) {
         png->num_idat_chunks = 1;
         png->idat = malloc(sizeof(IDAT));
     } else {
         png->num_idat_chunks++;
-        png->idat = realloc(png->idat, png->num_idat_chunks * sizeof(IDAT));
+        png->idat = realloc(png->idat, png->num_idat_chunks* sizeof(IDAT));
     }
     MEM_CHECK(png->idat);
 
-    IDAT * idat = &png->idat[png->num_idat_chunks - 1];
+    IDAT* idat = &png->idat[png->num_idat_chunks - 1];
 
     idat->length = length;
 
@@ -177,7 +191,7 @@ bool read_idat(PNG * png, FILE * file, int length) {
     return true;
 }
 
-bool read_iend(PNG * png, FILE * file) {
+bool read_iend(PNG* png, FILE* file) {
     png->iend = malloc(sizeof(IEND));
     MEM_CHECK(png->iend);
 
@@ -190,22 +204,7 @@ bool read_iend(PNG * png, FILE * file) {
     return true;
 }
 
-PNG * png_create() {
-    PNG * png = malloc(sizeof(PNG));
-    if(png == NULL)
-        return NULL;
-    
-    png->filename = NULL;
-    png->ihdr = NULL;
-    png->plte = NULL;
-    png->idat = NULL;
-    png->iend = NULL;
-    png->num_idat_chunks = 0;
-
-    return png;
-}
-
-bool png_read(PNG * png, FILE * file) {
+bool png_read(PNG* png, FILE* file) {
     if(file == NULL || png == NULL)
         return false;
     
@@ -222,7 +221,7 @@ bool png_read(PNG * png, FILE * file) {
     chunk_type[4] = '\0';
     do {
         for(int i = 3; i >= 0; i--) {
-            chunk_size = fgetc(file) << (8 * i);
+            chunk_size = fgetc(file) << (8* i);
             FEOF_CHECK(file);
         }
 
@@ -253,20 +252,20 @@ bool png_read(PNG * png, FILE * file) {
     return true;
 }
 
-bool ihdr_write_direct(PNG * png, FILE * file) {
+bool ihdr_write_direct(PNG* png, FILE* file) {
     if(png->ihdr == NULL)
         return false;
     
     char zero = 0;
     fprintf(file, "%c%c%c\x0D%s", zero, zero, zero, IHDR_HEADER);
 
-    IHDR * ihdr = png->ihdr;
+    IHDR* ihdr = png->ihdr;
 
     int i;
     for(i = 0; i < 4; i++)
-        fprintf(file, "%c", ((char) ((ihdr->width >> (8 * (3 - i)))) & 0xFF));
+        fprintf(file, "%c", ((char) ((ihdr->width >> (8* (3 - i)))) & 0xFF));
     for(i = 0; i < 4; i++)
-        fprintf(file, "%c", ((char) ((ihdr->height >> (8 * (3 - i)))) & 0xFF));
+        fprintf(file, "%c", ((char) ((ihdr->height >> (8* (3 - i)))) & 0xFF));
     fprintf(file, "%c", ihdr->bit_depth);
     fprintf(file, "%c", ihdr->color_type);
     fprintf(file, "%c", ihdr->compression_method);
@@ -276,7 +275,7 @@ bool ihdr_write_direct(PNG * png, FILE * file) {
     return true;
 }
 
-bool plte_write_direct(PNG * png, FILE * file) {
+bool plte_write_direct(PNG* png, FILE* file) {
     if(png->plte == NULL)
         return false;
     
@@ -287,7 +286,7 @@ bool plte_write_direct(PNG * png, FILE * file) {
     return true;
 }
 
-bool idat_write_direct(PNG * png, FILE * file) {
+bool idat_write_direct(PNG* png, FILE* file) {
     if(png->idat == NULL)
         return false;
     
@@ -304,7 +303,7 @@ bool idat_write_direct(PNG * png, FILE * file) {
     return true;
 }
 
-bool iend_write_direct(PNG * png, FILE * file) {
+bool iend_write_direct(PNG* png, FILE* file) {
     if(png->iend == NULL)
         return false;
     
@@ -314,7 +313,7 @@ bool iend_write_direct(PNG * png, FILE * file) {
     return true;
 }
 
-bool png_write(PNG * png, FILE * file) {
+bool png_write(PNG* png, FILE* file) {
     fprintf(file, "%s", PNG_HEADER);
 
     ihdr_write_direct(png, file);
@@ -327,14 +326,10 @@ bool png_write(PNG * png, FILE * file) {
     return true;
 }
 
-void png_free(PNG * png) {
+void png_free(PNG* png) {
     if(png == NULL)
         return;
-    
-    if(png->filename != NULL)
-        free(png->filename);
 
-    
     if(png->ihdr != NULL)
         free(png->ihdr);
     

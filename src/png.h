@@ -40,7 +40,6 @@ typedef struct {
 } IEND;
 
 typedef struct {
-    char* filename;
     IHDR* ihdr;
     PLTE* plte;
     IDAT* idat;
