@@ -6,3 +6,9 @@ src/ffc.dSYM/*
 *.o
 *.out
 src/*.o
+result.*
+*.png
+*.jpg
+*.jpeg
+*.bmp
+*.txt
