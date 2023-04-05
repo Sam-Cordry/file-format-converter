@@ -4,7 +4,7 @@ PATH=src
 SRCS=$(wildcard $(PATH)/*.c)
 
 ffc: $(PATH)/ffc.o $(PATH)/png.o $(PATH)/jpeg.o
-	$(CC) $(CFLAGS) $(PATH)/ffc.o $(PATH)/png.o -o ffc
+	$(CC) $(CFLAGS) $(PATH)/ffc.o $(PATH)/png.o $(PATH)/jpeg.o -o ffc
 
 $(PATH)/fcc.o: $(PATH)/ffc.c
 	$(CC) $(CFLAGS) -c -o $(PATH)/ffc.o $(PATH)/ffc.c
@@ -20,6 +20,7 @@ $(PATH)/jpeg.o: $(PATH)/jpeg.c
 
 clean:
 	/bin/rm -f $(PATH)/*.o
+	/bin/rm -f result.*
 
 realclean: clean
 	/bin/rm -f ffc

@@ -10,6 +10,16 @@
 #define FEOF_CHECK(file) if(feof(file)) { printf("Unexpected end of file");\
                                             return false; }
 
+void print_info(unsigned char* data, int length) {
+    printf("Ran with length: %d\nData:\n", length);
+    for(int i = 0; i < length; i++) {
+        printf("%02X", data[i]);
+        if(i % 2 == 1)
+            printf(" ");
+    }
+    printf("\n\n");
+}
+
 JPEG* jpeg_create() {
     JPEG* jpeg = malloc(sizeof(JPEG));
     
@@ -28,7 +38,7 @@ JPEG* jpeg_create() {
     return jpeg;
 }
 
-bool jpeg_read_frame(JPEG* jpeg, char* data, int length) {
+bool jpeg_read_frame(JPEG* jpeg, unsigned char* data, int length) {
     if(jpeg->frames_length == 0) {
         jpeg->frames_length = 1;
         jpeg->frames = malloc(sizeof(FRAME));
@@ -40,19 +50,17 @@ bool jpeg_read_frame(JPEG* jpeg, char* data, int length) {
 
     FRAME* frame = &jpeg->frames[jpeg->frames_length - 1];
 
-    frame->data = malloc(length + 1);
+    frame->data = malloc(length);
 
     frame->length = length;
     MEM_CHECK(frame->data);
 
     memcpy(frame->data, data, length);
 
-    frame->data[length] = '\0';
-
     return true;
 }
 
-bool jpeg_read_quant_table(JPEG* jpeg, char* data, int length) {
+bool jpeg_read_quant_table(JPEG* jpeg, unsigned char* data, int length) {
     if(jpeg->quantization_tables_length == 0) {
         jpeg->quantization_tables_length = 1;
         jpeg->quantization_tables = malloc(sizeof(QUANT_TABLE));
@@ -64,19 +72,19 @@ bool jpeg_read_quant_table(JPEG* jpeg, char* data, int length) {
 
     QUANT_TABLE* table = &jpeg->quantization_tables[jpeg->quantization_tables_length - 1];
 
-    table->data = malloc(length + 1);
+    table->data = malloc(length);
 
     table->length = length;
     MEM_CHECK(table->data);
 
     memcpy(table->data, data, length);
 
-    table->data[length] = '\0';
+    // print_info(table->data, table->length);
 
     return true;
 }
 
-bool jpeg_read_huff_table(JPEG* jpeg, char* data, int length) {
+bool jpeg_read_huff_table(JPEG* jpeg, unsigned char* data, int length) {
     if(jpeg->huffman_tables_length == 0) {
         jpeg->huffman_tables_length = 1;
         jpeg->huffman_tables = malloc(sizeof(HUFF_TABLE));
@@ -87,19 +95,17 @@ bool jpeg_read_huff_table(JPEG* jpeg, char* data, int length) {
 
     HUFF_TABLE* table = &jpeg->huffman_tables[jpeg->huffman_tables_length - 1];
 
-    table->data = malloc(length + 1);
+    table->data = malloc(length);
 
     table->length = length;
     MEM_CHECK(table->data);
 
     memcpy(table->data, data, length);
 
-    table->data[length] = '\0';
-
     return true;
 }
 
-bool jpeg_read_scan(JPEG* jpeg, char* data, int length) {
+bool jpeg_read_scan(JPEG* jpeg, unsigned char* data, int length) {
     if(jpeg->scans_length == 0) {
         jpeg->scans_length = 1;
         jpeg->scans = malloc(sizeof(SCAN));
@@ -110,19 +116,19 @@ bool jpeg_read_scan(JPEG* jpeg, char* data, int length) {
 
     SCAN* scan = &jpeg->scans[jpeg->scans_length - 1];
 
-    scan->data = malloc(length + 1);
+    scan->data = malloc(length);
 
     scan->length = length;
     MEM_CHECK(scan->data);
 
     memcpy(scan->data, data, length);
 
-    scan->data[length] = '\0';
+    // print_info(scan->data, length);
 
     return true;
 }
 
-bool jpeg_read_app_seg(JPEG* jpeg, char* data, int length) {
+bool jpeg_read_app_seg(JPEG* jpeg, unsigned char* data, int length) {
     if(jpeg->app_segments_length == 0) {
         jpeg->app_segments_length = 1;
         jpeg->app_segments = malloc(sizeof(APP_SEG));
@@ -133,25 +139,25 @@ bool jpeg_read_app_seg(JPEG* jpeg, char* data, int length) {
 
     APP_SEG* app_seg = &jpeg->app_segments[jpeg->app_segments_length - 1];
 
-    app_seg->data = malloc(length + 1);
+    app_seg->data = malloc(length);
 
     app_seg->length = length;
     MEM_CHECK(app_seg->data);
 
     memcpy(app_seg->data, data, length);
 
-    app_seg->data[length] = '\0';
+    // print_info(app_seg->data, length);
 
     return true;
 }
 
 bool jpeg_read(JPEG* jpeg, FILE* file) {
     if(fgetc(file) != START) {
-        printf("Invalid JPEG file");
+        printf("Invalid JPEG file\n");
         return false;
     }
     unsigned char marker;
-    char* data = malloc(MAX_DATA_LENGTH + 1);
+    unsigned char* data = malloc(MAX_DATA_LENGTH + 1);
     while(!feof(file)) {
         marker = fgetc(file);
         FEOF_CHECK(file);
@@ -159,7 +165,7 @@ bool jpeg_read(JPEG* jpeg, FILE* file) {
         char c;
         int i;
         for(i = 0; (unsigned char) (c = fgetc(file)) != START; i++) {
-            data[i] = c;
+            data[i] = (unsigned char) c;
             FEOF_CHECK(file);
         }
         data[i] = '\0';
@@ -178,16 +184,16 @@ bool jpeg_read(JPEG* jpeg, FILE* file) {
             case SOF13:
             case SOF14:
             case SOF15:
-                jpeg_read_frame(jpeg, data, strlen(data));
+                jpeg_read_frame(jpeg, data, i);
                 break;
             case DQT:
-                jpeg_read_quant_table(jpeg, data, strlen(data));
+                jpeg_read_quant_table(jpeg, data, i);
                 break;
             case DHT:
-                jpeg_read_huff_table(jpeg, data, strlen(data));
+                jpeg_read_huff_table(jpeg, data, i);
                 break;
             case SOS:
-                jpeg_read_scan(jpeg, data, strlen(data));
+                jpeg_read_scan(jpeg, data, i);
                 break;
             case APP0:
             case APP1:
@@ -205,7 +211,7 @@ bool jpeg_read(JPEG* jpeg, FILE* file) {
             case APP13:
             case APP14:
             case APP15:
-                jpeg_read_app_seg(jpeg, data, strlen(data));
+                jpeg_read_app_seg(jpeg, data, i);
                 break;
             case EOI:
             case SOI:
@@ -289,17 +295,25 @@ bool jpeg_write_app_seg(APP_SEG* app_seg, FILE* file, int count) {
             return false;
     }
 
-    fprintf(file, "%s", app_seg->data);
+    char zero = 0;
+    for(int i = 0; i < app_seg->length; i++)
+        fprintf(file, "%c", (app_seg->data[i] == '\0') ? zero : app_seg->data[i]);
+
     return true;
 }
 
 bool jpeg_write_huff_table(HUFF_TABLE* table, FILE* file) {
     fprintf(file, "%c%c", START, DHT);
-    fprintf(file, "%s", table->data);
+
+    char zero = 0;
+    for(int i = 0; i < 16; i++)
+        fprintf(file, "%c", (table->data[i] == '\0') ? zero : table->data[i]);
+    
     return true;
 }
 
 bool jpeg_write_frame(FRAME* frame, FILE* file, int count) {
+    // printf("Writing frame %d\n", count);
     fprintf(file, "%c", START);
 
     switch(count) {
@@ -347,19 +361,31 @@ bool jpeg_write_frame(FRAME* frame, FILE* file, int count) {
             return false;
     }
 
-    fprintf(file, "%s", frame->data);
+    char zero = 0;
+    for(int i = 0; i < frame->length; i++)
+        fprintf(file, "%c", (frame->data[i] == '\0') ? zero : frame->data[i]);
+    // printf("%d", frame->length);
+    
     return true;
 }
 
 bool jpeg_write_quant_table(QUANT_TABLE* table, FILE* file) {
     fprintf(file, "%c%c", START, DQT);
-    fprintf(file, "%s", table->data);
+
+    char zero = 0;
+    for(int i = 0; i < table->length; i++)
+        fprintf(file, "%c", (table->data[i] == '\0') ? zero : table->data[i]);
+    
     return true;
 }
 
 bool jpeg_write_scan(SCAN* scan, FILE* file) {
     fprintf(file, "%c%c", START, SOS);
-    fprintf(file, "%s", scan->data);
+
+    char zero = 0;
+    for(int i = 0; i < scan->length; i++)
+        fprintf(file, "%c", (scan->data[i] == '\0') ? zero : scan->data[i]);
+    
     return true;
 }
 
@@ -367,28 +393,23 @@ bool jpeg_write(JPEG* jpeg, FILE* file) {
     fprintf(file, "%c%c", START, SOI);
 
     int i;
-    for(i = 0; i < jpeg->app_segments_length; i++) {
+    for(i = 0; i < jpeg->app_segments_length; i++)
         jpeg_write_app_seg(&jpeg->app_segments[i], file, i);
-    }
 
-    for(i = 0; i < jpeg->quantization_tables_length; i++) {
+    for(i = 0; i < jpeg->quantization_tables_length; i++)
         jpeg_write_quant_table(&jpeg->quantization_tables[i], file);
-    }
 
-    for(i = 0; i < jpeg->huffman_tables_length; i++) {
+    for(i = 0; i < jpeg->huffman_tables_length; i++)
         jpeg_write_huff_table(&jpeg->huffman_tables[i], file);
-    }
 
-    for(i = 0; i < jpeg->frames_length; i++) {
+    for(i = 0; i < jpeg->frames_length; i++)
         jpeg_write_frame(&jpeg->frames[i], file, i);
-    }
 
-    for(i = 0; i < jpeg->scans_length; i++) {
+    for(i = 0; i < jpeg->scans_length; i++)
         jpeg_write_scan(&jpeg->scans[i], file);
-    }
 
     fprintf(file, "%c%c", START, EOI);
-    
+
     return true;
 }
 
@@ -396,24 +417,20 @@ void jpeg_free(JPEG* jpeg) {
     if(jpeg == NULL)
         return;
 
-    for(int i = 0; i < jpeg->frames_length; i++) {
+    for(int i = 0; i < jpeg->frames_length; i++)
         free(jpeg->frames[i].data);
-    }
     free(jpeg->frames);
 
-    for(int i = 0; i < jpeg->quantization_tables_length; i++) {
+    for(int i = 0; i < jpeg->quantization_tables_length; i++)
         free(jpeg->quantization_tables[i].data);
-    }
     free(jpeg->quantization_tables);
 
-    for(int i = 0; i < jpeg->huffman_tables_length; i++) {
+    for(int i = 0; i < jpeg->huffman_tables_length; i++)
         free(jpeg->huffman_tables[i].data);
-    }
     free(jpeg->huffman_tables);
 
-    for(int i = 0; i < jpeg->scans_length; i++) {
+    for(int i = 0; i < jpeg->scans_length; i++)
         free(jpeg->scans[i].data);
-    }
     free(jpeg->scans);
 
     free(jpeg);

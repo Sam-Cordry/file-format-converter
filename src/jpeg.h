@@ -106,21 +106,21 @@ typedef struct {
     int app_segments_length;
 } JPEG;
 
-JPEG* jpeg_create();
+JPEG* jpeg_create(void);
 
-bool jpeg_read_frame(JPEG* jpeg, FILE * file, int length);
-bool jpeg_read_quant_table(JPEG* jpeg, FILE * file, int length);
-bool jpeg_read_huff_table(JPEG* jpeg, FILE * file, int length);
-bool jpeg_read_scan(JPEG* jpeg, FILE * file, int length);
-bool jpeg_read_app_seg(JPEG* jpeg, FILE * file, int length);
-bool jpeg_read(JPEG* jpeg, FILE * file);
+bool jpeg_read_frame(JPEG* jpeg, unsigned char* data, int length);
+bool jpeg_read_quant_table(JPEG* jpeg, unsigned char* data, int length);
+bool jpeg_read_huff_table(JPEG* jpeg, unsigned char* data, int length);
+bool jpeg_read_scan(JPEG* jpeg, unsigned char* data, int length);
+bool jpeg_read_app_seg(JPEG* jpeg, unsigned char* data, int length);
+bool jpeg_read(JPEG* jpeg, FILE* file);
 
-bool jpeg_write_app_seg(JPEG* jpeg, FILE * file, int count);
-bool jpeg_write_huff_table(JPEG* jpeg, FILE * file);
-bool jpeg_write_frame(JPEG* jpeg, FILE * file, int count);
-bool jpeg_write_quant_table(JPEG* jpeg, FILE * file);
-bool jpeg_write_scan(JPEG* jpeg, FILE * file);
-bool jpeg_write(JPEG* jpeg, FILE * file);
+bool jpeg_write_app_seg(APP_SEG* jpeg, FILE* file, int count);
+bool jpeg_write_huff_table(HUFF_TABLE* jpeg, FILE* file);
+bool jpeg_write_frame(FRAME* jpeg, FILE* file, int count);
+bool jpeg_write_quant_table(QUANT_TABLE* jpeg, FILE* file);
+bool jpeg_write_scan(SCAN* jpeg, FILE* file);
+bool jpeg_write(JPEG* jpeg, FILE* file);
 
 void jpeg_free(JPEG* jpeg);
 

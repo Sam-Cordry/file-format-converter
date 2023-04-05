@@ -7,7 +7,8 @@
 #include "jpeg.h"
 
 bool is_valid_ext(char* extension) {
-    return strcmp(extension, "png") == 0 || strcmp(extension, "bmp") == 0;
+    return strcmp(extension, "png") == 0 || strcmp(extension, "jpg") == 0 ||
+        strcmp(extension, "jpeg") == 0;
 }
 
 int find_extension(char* filename) {
@@ -33,7 +34,7 @@ int main(int argc, char** argv) {
     if(strcmp(argv[argc - 1], "--help") == 0 || strcmp(argv[argc - 1], "-h") == 0) {
         printf("Command: fcc\n");
         printf("Usage: fcc [-o/--overwrite] [-v/--verbose] ");
-        printf("[-p/--pedantic] [filename]\n");
+        printf("[filename]\n");
         printf("Options:\n");
         printf("\t-o, --overwrite\t\tAutomatically overwrite converted file (if one exists already).\n");
         printf("\t-v, --verbose\t\tPrint additional information.\n");
@@ -49,19 +50,23 @@ int main(int argc, char** argv) {
             else if(strcmp(argv[i], "--verbose") == 0 ||
                                     strcmp(argv[i], "-v") == 0)
                 verbose = true;
+            else if(strcmp(argv[i], "-ov") == 0 || strcmp(argv[i], "-vo") == 0) {
+                overwrite = true;
+                verbose = true;
+            }
             else {
                 printf("Error: Invalid argument provided.\n");
-                printf("Usage: fcc [-o/--overwrite] [-v/--verbose] [-p/--pedantic] [filename]\n");
+                printf("Usage: fcc [-o/--overwrite] [-v/--verbose] [filename]\n");
                 return EXIT_FAILURE;
             }
         }
     }
-
-    if(overwrite)
-        printf("Overwrite mode enabled.\n");
     
-    if(verbose)
+    if(verbose) {
         printf("Verbose mode enabled.\n");
+        if(overwrite)
+            printf("Overwrite mode enabled.\n");
+    }
 
     char* filename = malloc(81 * sizeof(char));
 
@@ -89,7 +94,7 @@ int main(int argc, char** argv) {
     }
 
     char* end_extension = malloc(5);
-    printf("What should the output file format be (png or bmp)? ");
+    printf("What should the output file format be (png, jpeg, or jpg)? ");
     scanf("%s", end_extension);
 
     if(!is_valid_ext(end_extension)) {
@@ -98,12 +103,14 @@ int main(int argc, char** argv) {
     }
 
     char* end_filename = malloc(81);
-    printf("What should the output file be named? (Default: result.[extension])? ");
+    end_filename[0] = '\0';
+    printf("What should the output file be named? ");
     scanf("%s", end_filename);
     if(strcmp(end_filename, "") == 0) {
         end_filename = "result.";
         strcat(end_filename, extension);
     }
+
     FILE* end_file = fopen(end_filename, "r");
     if(end_file != NULL && !overwrite) {
         printf("Error: File already exists. Run again with -o or --overwrite to overwrite this file.\n");

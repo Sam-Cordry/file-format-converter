@@ -58,7 +58,7 @@ bool read_plte(PNG* png, FILE* file, int length);
 bool read_idat(PNG* png, FILE* file, int length);
 bool read_iend(PNG* png, FILE* file);
 
-PNG* png_create();
+PNG* png_create(void);
 bool png_read(PNG* png, FILE* file);
 bool png_write(PNG* png, FILE* file);
 void png_free(PNG* png);
