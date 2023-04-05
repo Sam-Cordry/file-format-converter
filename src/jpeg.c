@@ -20,7 +20,7 @@ void print_info(unsigned char* data, int length) {
     printf("\n\n");
 }
 
-JPEG* jpeg_create() {
+JPEG* jpeg_create(void) {
     JPEG* jpeg = malloc(sizeof(JPEG));
     
     jpeg->frames = NULL;
@@ -79,8 +79,6 @@ bool jpeg_read_quant_table(JPEG* jpeg, unsigned char* data, int length) {
 
     memcpy(table->data, data, length);
 
-    // print_info(table->data, table->length);
-
     return true;
 }
 
@@ -123,8 +121,6 @@ bool jpeg_read_scan(JPEG* jpeg, unsigned char* data, int length) {
 
     memcpy(scan->data, data, length);
 
-    // print_info(scan->data, length);
-
     return true;
 }
 
@@ -145,8 +141,6 @@ bool jpeg_read_app_seg(JPEG* jpeg, unsigned char* data, int length) {
     MEM_CHECK(app_seg->data);
 
     memcpy(app_seg->data, data, length);
-
-    // print_info(app_seg->data, length);
 
     return true;
 }
@@ -306,14 +300,13 @@ bool jpeg_write_huff_table(HUFF_TABLE* table, FILE* file) {
     fprintf(file, "%c%c", START, DHT);
 
     char zero = 0;
-    for(int i = 0; i < 16; i++)
+    for(int i = 0; i < table->length; i++)
         fprintf(file, "%c", (table->data[i] == '\0') ? zero : table->data[i]);
     
     return true;
 }
 
 bool jpeg_write_frame(FRAME* frame, FILE* file, int count) {
-    // printf("Writing frame %d\n", count);
     fprintf(file, "%c", START);
 
     switch(count) {
@@ -364,7 +357,6 @@ bool jpeg_write_frame(FRAME* frame, FILE* file, int count) {
     char zero = 0;
     for(int i = 0; i < frame->length; i++)
         fprintf(file, "%c", (frame->data[i] == '\0') ? zero : frame->data[i]);
-    // printf("%d", frame->length);
     
     return true;
 }
@@ -399,11 +391,11 @@ bool jpeg_write(JPEG* jpeg, FILE* file) {
     for(i = 0; i < jpeg->quantization_tables_length; i++)
         jpeg_write_quant_table(&jpeg->quantization_tables[i], file);
 
-    for(i = 0; i < jpeg->huffman_tables_length; i++)
-        jpeg_write_huff_table(&jpeg->huffman_tables[i], file);
-
     for(i = 0; i < jpeg->frames_length; i++)
         jpeg_write_frame(&jpeg->frames[i], file, i);
+
+    for(i = 0; i < jpeg->huffman_tables_length; i++)
+        jpeg_write_huff_table(&jpeg->huffman_tables[i], file);
 
     for(i = 0; i < jpeg->scans_length; i++)
         jpeg_write_scan(&jpeg->scans[i], file);

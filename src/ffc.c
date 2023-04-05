@@ -106,10 +106,10 @@ int main(int argc, char** argv) {
     end_filename[0] = '\0';
     printf("What should the output file be named? ");
     scanf("%s", end_filename);
-    if(strcmp(end_filename, "") == 0) {
-        end_filename = "result.";
-        strcat(end_filename, extension);
-    }
+    // if(strcmp(end_filename, "") == 0) {
+    //     end_filename = "result.";
+    //     strcat(end_filename, extension);
+    // }
 
     FILE* end_file = fopen(end_filename, "r");
     if(end_file != NULL && !overwrite) {
@@ -125,7 +125,7 @@ int main(int argc, char** argv) {
             return EXIT_FAILURE;
         }
 
-        end_file = fopen("result.png", "w");
+        end_file = fopen(end_filename, "w");
         if(!png_write(png, end_file)) {
             printf("Error: Unable to write PNG file.\n");
             return EXIT_FAILURE;
@@ -138,7 +138,7 @@ int main(int argc, char** argv) {
             return EXIT_FAILURE;
         }
 
-        end_file = fopen("result.jpeg", "w");
+        end_file = fopen(end_filename, "w");
         if(!jpeg_write(jpeg, end_file)) {
             printf("Error: Unable to write JPEG file.\n");
             return EXIT_FAILURE;

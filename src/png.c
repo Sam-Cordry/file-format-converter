@@ -37,7 +37,7 @@ bool is_iend_header(const char* header) {
                 memcmp(header, IEND_HEADER, 4) != 0);
 }
 
-PNG* png_create() {
+PNG* png_create(void) {
     PNG* png = malloc(sizeof(PNG));
     if(png == NULL)
         return NULL;
