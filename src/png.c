@@ -1,166 +1,225 @@
-#include <stdio.h>
-#include <stddef.h>
-#include <stdlib.h>
-#include <string.h>
-#include <stdbool.h>
-#include <math.h>
+///
+/// @file png.c
+/// @brief PNG file format implementation
+/// @author Sam Cordry
 
+// include PNG header
 #include "png.h"
 
+/// @brief The MEM_CHECK macro checks if the given pointer is NULL.
 #define MEM_CHECK(ptr) if(ptr == NULL) { printf("Unable to allocate memory");\
                                             return false; }
+
+/// @brief The FEOF_CHECK macro checks if the end of the file has been reached.
 #define FEOF_CHECK(file) if(feof(file)) { printf("Unexpected end of file");\
                                             return false; }
 
+/// @brief The is_png_header function checks if the string is a PNG header.
+/// @param header The header to check.
+/// @return True if the header is a PNG header, false otherwise.
 bool is_png_header(const char* header) {
     return !(header == NULL || strlen(header) != 8 ||
                 memcmp(header, PNG_HEADER, 8) != 0);
 }
 
+/// @brief The is_ihdr_header function checks if the string is an IHDR header.
+/// @param header The header to check.
+/// @return True if the header is an IHDR header, false otherwise.
 bool is_idhr_header(const char* header) {
     return !(header == NULL || strlen(header) != 4 ||
                 memcmp(header, IHDR_HEADER, 4) != 0);
 }
 
+/// @brief The is_plte_header function checks if the string is a PLTE header.
+/// @param header The header to check.
+/// @return True if the header is a PLTE header, false otherwise.
 bool is_plte_header(const char* header) {
     return !(header == NULL || strlen(header) != 4 ||
                 memcmp(header, PLTE_HEADER, 4) != 0);
 }
 
+/// @brief The is_idat_header function checks if the string is an IDAT header.
+/// @param header The header to check.
+/// @return True if the header is an IDAT header, false otherwise.
 bool is_idat_header(const char* header) {
     return !(header == NULL || strlen(header) != 4 ||
                 memcmp(header, IDAT_HEADER, 4) != 0);
 }
 
+/// @brief The is_iend_header function checks if the string is an IEND header.
+/// @param header The header to check.
+/// @return True if the header is an IEND header, false otherwise.
 bool is_iend_header(const char* header) {
     return !(header == NULL || strlen(header) != 4 ||
                 memcmp(header, IEND_HEADER, 4) != 0);
 }
 
+/// @brief The png_create function creates a PNG struct.
+/// @return A pointer to the PNG struct.
 PNG* png_create(void) {
+    // allocate memory for the PNG struct
     PNG* png = malloc(sizeof(PNG));
+
+    // check if the memory was allocated
     if(png == NULL)
         return NULL;
     
+    // initialize the PNG struct
     png->ihdr = NULL;
     png->plte = NULL;
     png->idat = NULL;
     png->iend = NULL;
     png->num_idat_chunks = 0;
 
+    // return the PNG struct
     return png;
 }
 
+/// @brief The png_destroy function destroys a PNG struct.
+/// @param png The PNG struct to destroy.
+/// @param file The file to close.
+/// @param length The length of the IDAT chunk.
+/// @return True if the PNG struct was destroyed, false otherwise.
 bool read_ihdr(PNG* png, FILE* file, int length) {
+    // check if the length is valid
     if(length != 13) {
         printf("Invalid IHDR chunk length");
         return false;
     }
 
+    // allocate memory for the IHDR struct
     png->ihdr = malloc(sizeof(IHDR));
     MEM_CHECK(png->ihdr);
 
-    IHDR* ihdr = png->ihdr;
-
-    ihdr->width = 0;
-
+    // read the width
     int i;
+    png->ihdr->width = 0;
     for(i = 0; i < 4; i++) {
-        ihdr->width = ihdr->width | (fgetc(file) << (8 * (3 - i)));
+        png->ihdr->width = png->ihdr->width | (fgetc(file) << (8 * (3 - i)));
         FEOF_CHECK(file);
     }
 
+    // read the height
     for(i = 3; i >= 0; i--) {
-        ihdr->height = fgetc(file) << (8 * i);
+        png->ihdr->height = fgetc(file) << (8 * i);
         FEOF_CHECK(file);
     }
 
-    if(ihdr->width == 0 || ihdr->height == 0 ||
-                    ihdr->width > 0x80000000 || ihdr->height > 0x80000000) {
+    // check if the width and height are valid
+    if(png->ihdr->width == 0 || png->ihdr->height == 0 ||
+                    png->ihdr->width > 0x80000000 || png->ihdr->height > 0x80000000) {
         printf("Invalid image dimensions");
         return false;
     }
     
-    ihdr->bit_depth = fgetc(file);
+    // read the bit depth
+    png->ihdr->bit_depth = fgetc(file);
     FEOF_CHECK(file);
     
-    ihdr->color_type = fgetc(file);
+    // read the color type
+    png->ihdr->color_type = fgetc(file);
     FEOF_CHECK(file);
 
-    if((ihdr->color_type == 0 && ihdr->bit_depth != 1 && ihdr->bit_depth != 2 &&
-        ihdr->bit_depth != 4 && ihdr->bit_depth != 8 && ihdr->bit_depth != 16) ||
-        (ihdr->color_type == 2 && ihdr->bit_depth != 8 && ihdr->bit_depth != 16) ||
-        (ihdr->color_type == 3 && ihdr->bit_depth != 1 && ihdr->bit_depth != 2 &&
-        ihdr->bit_depth != 4 && ihdr->bit_depth != 8) ||
-        (ihdr->color_type == 4 && ihdr->bit_depth != 8 && ihdr->bit_depth != 16) ||
-        (ihdr->color_type == 6 && ihdr->bit_depth != 8 && ihdr->bit_depth != 16)) {
+    // check if the bit depth and color type are a valid combination
+    if((png->ihdr->color_type == 0 && png->ihdr->bit_depth != 1 &&
+        png->ihdr->bit_depth != 2 && png->ihdr->bit_depth != 4 &&
+        png->ihdr->bit_depth != 8 && png->ihdr->bit_depth != 16) ||
+        (png->ihdr->color_type == 2 && png->ihdr->bit_depth != 8 &&
+        png->ihdr->bit_depth != 16) || (png->ihdr->color_type == 3 &&
+        png->ihdr->bit_depth != 1 && png->ihdr->bit_depth != 2 &&
+        png->ihdr->bit_depth != 4 && png->ihdr->bit_depth != 8) ||
+        (png->ihdr->color_type == 4 && png->ihdr->bit_depth != 8 &&
+        png->ihdr->bit_depth != 16) || (png->ihdr->color_type == 6 &&
+        png->ihdr->bit_depth != 8 && png->ihdr->bit_depth != 16)) {
         printf("Invalid bit depth and color type combination");
         return false;
     }
     
-    ihdr->compression_method = fgetc(file);
+    // read the compression method
+    png->ihdr->compression_method = fgetc(file);
     FEOF_CHECK(file);
 
-    if(ihdr->compression_method != 0) {
+    // check if the compression method is valid
+    if(png->ihdr->compression_method != 0) {
         printf("Invalid compression method");
         return false;
     }
     
-    ihdr->filter_method = fgetc(file);
+    // read the filter method
+    png->ihdr->filter_method = fgetc(file);
     FEOF_CHECK(file);
 
-    if(ihdr->filter_method != 0) {
+    // check if the filter method is valid
+    if(png->ihdr->filter_method != 0) {
         printf("Invalid filter method");
         return false;
     }
     
-    ihdr->interlace_method = fgetc(file);
+    // read the interlace method
+    png->ihdr->interlace_method = fgetc(file);
     FEOF_CHECK(file);
 
-    if(ihdr->interlace_method > 1) {
+    // check if the interlace method is valid
+    if(png->ihdr->interlace_method > 1) {
         printf("Invalid interlace method");
         return false;
     }
 
+    // read the CRC
     for(int i = 0; i < 4; i++) {
-        ihdr->crc[i] = fgetc(file);
+        png->ihdr->crc[i] = fgetc(file);
         FEOF_CHECK(file);
     }
-    ihdr->crc[4] = '\0';
+    png->ihdr->crc[4] = '\0';
 
     return true;
 }
 
+/// @brief The read_plte function reads a PLTE chunk.
+/// @param png The PNG struct to read the PLTE chunk into.
+/// @param file The file to read the PLTE chunk from.
+/// @param length The length of the PLTE chunk.
+/// @return True if the PLTE chunk was read, false otherwise.
 bool read_plte(PNG* png, FILE* file, int length) {
+    // check if the length is valid
     if(length != 3) {
         printf("Invalid PLTE chunk length");
         return false;
     }
 
+    // allocate memory for the PLTE struct
     png->plte = malloc(sizeof(PLTE));
     MEM_CHECK(png->plte);
 
-    PLTE* plte = png->plte;
-
-    plte->red = fgetc(file);
+    // read the red value
+    png->plte->red = fgetc(file);
     FEOF_CHECK(file);
 
-    plte->green = fgetc(file);
+    // read the green value
+    png->plte->green = fgetc(file);
     FEOF_CHECK(file);
 
-    plte->blue = fgetc(file);
+    // read the blue value
+    png->plte->blue = fgetc(file);
     FEOF_CHECK(file);
 
+    // read the CRC
     for(int i = 0; i < 4; i++) {
-        plte->crc[i] = fgetc(file);
+        png->plte->crc[i] = fgetc(file);
         FEOF_CHECK(file);
     }
-    plte->crc[4] = '\0';
+    png->plte->crc[4] = '\0';
 
     return true;
 }
 
+/// @brief The read_idat function reads an IDAT chunk.
+/// @param png The PNG struct to read into.
+/// @param file The file to read from.
+/// @param length The length of the IDAT chunk.
+/// @return True if the IDAT chunk was read, false otherwise.
 bool read_idat(PNG* png, FILE* file, int length) {
+    // increment the number of IDAT chunks and allocate memory appropriately
     if(png->num_idat_chunks == 0) {
         png->num_idat_chunks = 1;
         png->idat = malloc(sizeof(IDAT));
@@ -170,31 +229,39 @@ bool read_idat(PNG* png, FILE* file, int length) {
     }
     MEM_CHECK(png->idat);
 
-    IDAT* idat = &png->idat[png->num_idat_chunks - 1];
+    // allocate memory for the IDAT struct
+    png->idat[png->num_idat_chunks - 1].data = malloc(length);
+    MEM_CHECK(png->idat->data);
 
-    idat->length = length;
+    // set the length of the IDAT chunk
+    png->idat[png->num_idat_chunks - 1].length = length;
 
-    idat->data = malloc(length);
-    MEM_CHECK(idat->data);
-
+    // read the data
     for(int i = 0; i < length; i++) {
-        idat->data[i] = fgetc(file);
+        png->idat->data[i] = fgetc(file);
         FEOF_CHECK(file);
     }
 
+    // read the CRC
     for(int i = 0; i < 4; i++) {
-        idat->crc[i] = fgetc(file);
+        png->idat->crc[i] = fgetc(file);
         FEOF_CHECK(file);
     }
-    idat->crc[4] = '\0';
+    png->idat->crc[4] = '\0';
 
     return true;
 }
 
+/// @brief The read_iend function reads an IEND chunk.
+/// @param png The PNG struct to read into.
+/// @param file The file to read from.
+/// @return True if the IEND chunk was read, false otherwise.
 bool read_iend(PNG* png, FILE* file) {
+    // allocate memory for the IEND struct
     png->iend = malloc(sizeof(IEND));
     MEM_CHECK(png->iend);
 
+    // read the CRC
     for(int i = 0; i < 4; i++) {
         png->iend->crc[i] = fgetc(file);
         FEOF_CHECK(file);
@@ -204,36 +271,44 @@ bool read_iend(PNG* png, FILE* file) {
     return true;
 }
 
+/// @brief The png_read function reads a PNG file from a given file.
+/// @param png The PNG struct to read into.
+/// @param file The file to read from.
+/// @return True if the PNG file was read, false otherwise.
 bool png_read(PNG* png, FILE* file) {
+    // check if the PNG and file exist
     if(file == NULL || png == NULL)
         return false;
     
+    // read the header
     char header[9];
     for(int i = 0; i < 8; i++) {
         header[i] = fgetc(file);
     }
     header[8] = '\0';
+
+    // check if the header is valid
     if(!is_png_header(header))
         return false;
 
+    // read the chunks while there are still chunks to read
     unsigned int chunk_size;
     char chunk_type[5];
     chunk_type[4] = '\0';
-    do {
+    while(!feof(file)) {
+        // read the chunk size
         for(int i = 3; i >= 0; i--) {
             chunk_size = fgetc(file) << (8* i);
             FEOF_CHECK(file);
         }
 
+        // read the chunk type
         for(int i = 0; i < 4; i++) {
             chunk_type[i] = fgetc(file);
             FEOF_CHECK(file);
         }
-
-        // TODO: Print these if verbose
-        // printf("Chunk size: %d\n", chunk_size);
-        // printf("Chunk type: %s\n", chunk_type);
         
+        // find the chunk type and read it accordingly
         if(is_idhr_header(chunk_type)) {
             if(!read_ihdr(png, file, chunk_size))
                 return false;
@@ -248,94 +323,148 @@ bool png_read(PNG* png, FILE* file) {
         } else {
             printf("Not recognized.\n\n");
         }
-    } while(!feof(file));
+    }
     return true;
 }
 
-bool ihdr_write_direct(PNG* png, FILE* file) {
-    if(png->ihdr == NULL)
+/// @brief The ihdr_write function writes an IHDR chunk to a file.
+/// @param ihdr The IHDR struct to write from.
+/// @param file The file to write to.
+/// @return True if the IHDR chunk was written, false otherwise.
+bool ihdr_write(IHDR* ihdr, FILE* file) {
+    // check if the IHDR chunk exists
+    if(ihdr == NULL)
         return false;
     
+    // write the IHDR header
     char zero = 0;
     fprintf(file, "%c%c%c\x0D%s", zero, zero, zero, IHDR_HEADER);
 
-    IHDR* ihdr = png->ihdr;
-
+    // write the width
     int i;
     for(i = 0; i < 4; i++)
         fprintf(file, "%c", ((char) ((ihdr->width >> (8* (3 - i)))) & 0xFF));
+    
+    // write the height
     for(i = 0; i < 4; i++)
         fprintf(file, "%c", ((char) ((ihdr->height >> (8* (3 - i)))) & 0xFF));
+    
+    // write the other data present in the IHDR chunk
     fprintf(file, "%c", ihdr->bit_depth);
     fprintf(file, "%c", ihdr->color_type);
     fprintf(file, "%c", ihdr->compression_method);
     fprintf(file, "%c", ihdr->filter_method);
     fprintf(file, "%c", ihdr->interlace_method);
     fprintf(file, "%s", ihdr->crc);
+
     return true;
 }
 
-bool plte_write_direct(PNG* png, FILE* file) {
-    if(png->plte == NULL)
+/// @brief The plte_write function writes a PLTE chunk to a file.
+/// @param plte The PLTE struct to write from. 
+/// @param file The file to write to.
+/// @return True if the PLTE chunk was written, false otherwise.
+bool plte_write(PLTE* plte, FILE* file) {
+    // check if the PLTE chunk exists
+    if(plte == NULL)
         return false;
     
+    // write the PLTE header
     char zero = 0;
     fprintf(file, "%c%c%cx07%s", zero, zero, zero, PLTE_HEADER);
-    fprintf(file, "%c%c%c", png->plte->red, png->plte->green, png->plte->blue);
-    fprintf(file, "%s", png->plte->crc);
+
+    // write the palette
+    fprintf(file, "%c%c%c", plte->red, plte->green, plte->blue);
+
+    // write the CRC
+    fprintf(file, "%s", plte->crc);
+
     return true;
 }
 
-bool idat_write_direct(PNG* png, FILE* file) {
+/// @brief The idat_write function writes all IDAT chunks to a file.
+/// @param png The PNG struct to write from.
+/// @param file The file to write to.
+/// @return True if the IDAT chunk was written, false otherwise.
+bool idat_write(PNG* png, FILE* file) {
+    // check if the IDAT chunk exists
     if(png->idat == NULL)
         return false;
     
+    // loop for every IDAT chunk
     char zero = 0;
     for(unsigned int i = 0; i < png->num_idat_chunks; i++) {
+        // write the length
         unsigned int j;
         for(j = 0; j < 4; j++)
             fprintf(file, "%c", ((int) (png->idat[i].length / pow(256, 3 - j))) % 256);
+        
+        // write the IDAT header
         fprintf(file, "%s", IDAT_HEADER);
+
+        // write the data
         for(j = 0; j < png->idat[i].length; j++)
             fprintf(file, "%c", (png->idat[i].data[j] == '\0') ? zero : png->idat[i].data[j]);
+        
+        // write the CRC
         fprintf(file, "%s", png->idat[i].crc);
     }
+
     return true;
 }
 
-bool iend_write_direct(PNG* png, FILE* file) {
-    if(png->iend == NULL)
+/// @brief The iend_write function writes an IEND chunk to a file.
+/// @param iend The IEND struct to write from.
+/// @param file The file to write to.
+/// @return True if the IEND chunk was written, false otherwise.
+bool iend_write(IEND* iend, FILE* file) {
+    // check if the IEND chunk exists
+    if(iend == NULL)
         return false;
     
+    // write the IEND header
     char zero = 0;
     fprintf(file, "%c%c%c%c%s", zero, zero, zero, zero, IEND_HEADER);
-    fprintf(file, "%s", png->iend->crc);
+
+    // write the CRC
+    fprintf(file, "%s", iend->crc);
+
     return true;
 }
 
+/// @brief The png_write function writes a PNG struct to a file.
+/// @param png The PNG struct to write from.
+/// @param file The file to write to.
+/// @return True if the PNG struct was written, false otherwise.
 bool png_write(PNG* png, FILE* file) {
+    // write the PNG header
     fprintf(file, "%s", PNG_HEADER);
 
-    ihdr_write_direct(png, file);
-    plte_write_direct(png, file);
-    idat_write_direct(png, file);
-    iend_write_direct(png, file);
-
-    fflush(file);
+    // write the chunks in the correct order
+    ihdr_write(png->ihdr, file);
+    plte_write(png->plte, file);
+    idat_write(png, file);
+    iend_write(png->iend, file);
 
     return true;
 }
 
+/// @brief The png_free function frees the memory allocated to a PNG struct.
+/// @param png The PNG struct to free.
 void png_free(PNG* png) {
+    // check if the PNG struct exists
     if(png == NULL)
         return;
 
+    // free the IHDR chunk if it exists
     if(png->ihdr != NULL)
         free(png->ihdr);
     
+    // free the PLTE chunk if it exists
     if(png->plte != NULL)
         free(png->plte);
     
+    // free the IDAT chunks if they exist
     if(png->idat != NULL) {
         for(unsigned int i = 0; i < png->num_idat_chunks; i++) {
             if(png->idat[i].data != NULL)
@@ -344,8 +473,10 @@ void png_free(PNG* png) {
         free(png->idat);
     }
     
+    // free the IEND chunk if it exists
     if(png->iend != NULL)
         free(png->iend);
-    
+
+    // free the PNG struct    
     free(png);
 }
