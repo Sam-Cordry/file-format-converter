@@ -13,7 +13,7 @@ In its current form, this project does not have the necessary files in it to
 help you setup this tool globally on your system. However, you can still use
 this tool by either installing it locally yourself or by just referring to the
 executable file by its path. Download the repository and run the following
-commands in the root directory of the project:
+command in the root directory of the project:
 ```bash
 make
 ```
