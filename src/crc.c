@@ -1,7 +1,14 @@
-#include <stdbool.h>
+///
+/// @file crc.c
+/// @brief CRC implementation
+/// @author PNG Specification
 
+#include "crc.h"
+
+// table to store already calculated CRC codes
 unsigned long crc_table[256];
 
+// tracks whether the table has been computed
 bool crc_table_computed = false;
 
 void make_crc_table(void) {

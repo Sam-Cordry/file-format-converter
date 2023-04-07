@@ -3,9 +3,8 @@
 /// @brief PNG file format implementation
 /// @author Sam Cordry
 
-// include PNG header
+// include PNG and CRC headers
 #include "png.h"
-
 #include "crc.h"
 
 /// @brief The MEM_CHECK macro checks if the given pointer is NULL.
@@ -93,17 +92,27 @@ bool read_ihdr(PNG* png, FILE* file, int length) {
     png->ihdr = malloc(sizeof(IHDR));
     MEM_CHECK(png->ihdr);
 
+    // allocate memory for data to verify checksum
+    unsigned char* data = malloc(17);
+    memcpy(data, IHDR_HEADER, 4);
+
     // read the width
     int i;
+    char c;
     png->ihdr->width = 0;
     for(i = 0; i < 4; i++) {
-        png->ihdr->width = png->ihdr->width | (fgetc(file) << (8 * (3 - i)));
+        c = fgetc(file);
+        png->ihdr->width = png->ihdr->width | (c << (8 * (3 - i)));
+        memcpy(data + 4 + i, &c, 1);
         FEOF_CHECK(file);
     }
 
     // read the height
-    for(i = 3; i >= 0; i--) {
-        png->ihdr->height = fgetc(file) << (8 * i);
+    png->ihdr->height = 0;
+    for(i = 0; i < 4; i++) {
+        c = fgetc(file);
+        png->ihdr->height = png->ihdr->height | (c << (8 * (3 - i)));
+        memcpy(data + 8 + i, &c, 1);
         FEOF_CHECK(file);
     }
 
@@ -174,20 +183,21 @@ bool read_ihdr(PNG* png, FILE* file, int length) {
     }
     png->ihdr->crc[4] = '\0';
 
-    unsigned char* data = malloc(17);
-    memcpy(data, IHDR_HEADER, 4);
-    memcpy(data + 4, png->ihdr->width, 4);
-    memcpy(data + 8, png->ihdr->height, 4);
-    memcpy(data + 12, png->ihdr->bit_depth, 1);
-    memcpy(data + 13, png->ihdr->color_type, 1);
-    memcpy(data + 14, png->ihdr->compression_method, 1);
-    memcpy(data + 15, png->ihdr->filter_method, 1);
-    memcpy(data + 16, png->ihdr->interlace_method, 1);
-    unsigned char* calc_crc = (unsigned char*) &crc(data, 17);
+    // fill in the rest of the data for the chunk
+    memcpy(data + 12, &(png->ihdr->bit_depth), 1);
+    memcpy(data + 13, &(png->ihdr->color_type), 1);
+    memcpy(data + 14, &(png->ihdr->compression_method), 1);
+    memcpy(data + 15, &(png->ihdr->filter_method), 1);
+    memcpy(data + 16, &(png->ihdr->interlace_method), 1);
 
+    // calculate the expected checksum
+    unsigned long calc_crc = crc(data, 17);
+    unsigned char* crc = (unsigned char*) &calc_crc;
+
+    // validate the read checksum against expected checksum
     for(int i = 0; i < 4; i++) {
-        if(png->ihdr->crc[i] != calc_crc[3 - i]) {
-            printf("Invalid PNg: Failed CRC Check");
+        if(png->ihdr->crc[i] != crc[3 - i]) {
+            printf("Invalid PNG: Failed CRC Check\n");
             return false;
         }
     }
@@ -203,7 +213,7 @@ bool read_ihdr(PNG* png, FILE* file, int length) {
 bool read_plte(PNG* png, FILE* file, int length) {
     // check if the length is valid
     if(length != 3) {
-        printf("Invalid PLTE chunk length");
+        printf("Invalid PLTE chunk length\n");
         return false;
     }
 
@@ -230,16 +240,23 @@ bool read_plte(PNG* png, FILE* file, int length) {
     }
     png->plte->crc[4] = '\0';
 
+    // allocate memory for data to calculate checksum
     unsigned char* data = malloc(7);
-    memcpy(data, PLTE_HEADER, 4);
-    memcpy(data + 4, png->plte->red, 1);
-    memcpy(data + 5, png->plte->green, 1);
-    memcpy(data + 6, png->plte->blue, 1);
-    unsigned char* calc_crc = (unsigned char*) &crc(data, 7);
 
+    // copy needed data
+    memcpy(data, PLTE_HEADER, 4);
+    memcpy(data + 4, &(png->plte->red), 1);
+    memcpy(data + 5, &(png->plte->green), 1);
+    memcpy(data + 6, &(png->plte->blue), 1);
+
+    // calculate expected checksum
+    unsigned long calc_crc = crc(data, 7);
+    unsigned char* crc = (unsigned char*) &calc_crc;
+
+    // validate the read checksum against the calculated one
     for(int i = 0; i < 4; i++) {
-        if(png->plte->crc[i] != calc_crc[3 - i]) {
-            printf("Invalid PNG: Failed CRC Check");
+        if(png->plte->crc[i] != crc[3 - i]) {
+            printf("Invalid PNG: Failed CRC Check\n");
             return false;
         }
     }
@@ -283,14 +300,21 @@ bool read_idat(PNG* png, FILE* file, int length) {
     }
     png->idat->crc[4] = '\0';
 
+    // allocate memory for the data to calculate checksum
     unsigned char* data = malloc(length + 4);
+
+    // copy necessary data for checksum calculation
     memcpy(data, &IDAT_HEADER, 4);
     memcpy(data + 4, png->idat->data, length);
-    unsigned char* calc_crc = (unsigned char*) &crc(data, length = 4);
 
+    // calculate checksum and read it as characters
+    unsigned long calc_crc = crc(data, length + 4);
+    unsigned char* crc = (unsigned char*) &calc_crc;
+
+    // validate read checksum against expected checksum
     for(int i = 0; i < 4; i++) {
-        if(calc_crc[3 - i] != png->idat->crc[i]) {
-            printf("Invalid PNG: Failed CRC Check");
+        if(png->idat->crc[i] != crc[3 - i]) {
+            printf("Invalid PNG: Failed CRC Check\n");
             return false;
         }
     }
@@ -314,8 +338,9 @@ bool read_iend(PNG* png, FILE* file) {
     }
     png->iend->crc[4] = '\0';
     
-    if(strcmp(png->iend->crc, "\xAE\x42\x60\x82") != 0) {
-        printf("Invalid PNG: Failed CRC Check");
+    // validate checksum against known constant value
+    if(strcmp((char*) png->iend->crc, IEND_CRC) != 0) {
+        printf("Invalid PNG: Failed CRC Check\n");
         return false;
     }
 
@@ -362,6 +387,9 @@ bool png_read(PNG* png, FILE* file) {
         // find the chunk type and read it accordingly
         if(is_idhr_header(chunk_type)) {
             if(!read_ihdr(png, file, chunk_size))
+                return false;
+        } else if(is_plte_header(chunk_type)) {
+            if(!read_plte(png, file, chunk_size))
                 return false;
         } else if(is_idat_header(chunk_type)) {
             if(!read_idat(png, file, chunk_size))

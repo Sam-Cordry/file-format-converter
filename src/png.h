@@ -19,6 +19,7 @@
 #define PLTE_HEADER "\x50\x4C\x54\x45"
 #define IDAT_HEADER "\x49\x44\x41\x54"
 #define IEND_HEADER "\x49\x45\x4E\x44"
+#define IEND_CRC "\xAE\x42\x60\x82"
 
 /// @brief IHDR chunk
 typedef struct {

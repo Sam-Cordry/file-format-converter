@@ -8,6 +8,26 @@ JPEGs into their own specially-made structures and write them from said
 structures. You can also find the start of similar progress being made for
 TIFF files as well.
 
+## How to Use
+In its current form, this project does not have the necessary files in it to
+help you setup this tool globally on your system. However, you can still use
+this tool by either installing it locally yourself or by just referring to the
+executable file by its path. Download the repository and run the following
+commands in the root directory of the project:
+```bash
+make
+```
+Once you have this, you can run the program by using the following command:
+```bash
+./ffc
+```
+You can also run one of these help commands to see what options are currently
+available:
+```bash
+./ffc -h
+./ffc --help
+```
+
 ## The Current Next Step
 As of right now, I am looking into how to algorithmically generate a JPEG from
 a PNG and vice versa. This will be the first major step in the "converter" part
