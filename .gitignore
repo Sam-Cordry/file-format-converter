@@ -12,3 +12,4 @@ result.*
 *.jpeg
 *.bmp
 *.txt
+.DS_Store
