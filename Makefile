@@ -8,8 +8,8 @@ PATH=src
 SRCS=$(wildcard $(PATH)/*.c)
 
 # make all
-ffc: $(PATH)/ffc.o $(PATH)/png.o $(PATH)/jpeg.o
-	$(CC) $(CFLAGS) $(PATH)/ffc.o $(PATH)/png.o $(PATH)/jpeg.o -o ffc
+ffc: $(PATH)/ffc.o $(PATH)/png.o $(PATH)/jpeg.o $(PATH)/crc.o
+	$(CC) $(CFLAGS) $(PATH)/ffc.o $(PATH)/png.o $(PATH)/jpeg.o $(PATH)/crc.o -o ffc
 
 # make object files
 $(PATH)/fcc.o: $(PATH)/ffc.c
@@ -20,6 +20,9 @@ $(PATH)/png.o: $(PATH)/png.c
 
 $(PATH)/jpeg.o: $(PATH)/jpeg.c
 	$(CC) $(CFLAGS) -c -o $(PATH)/jpeg.o $(PATH)/jpeg.c
+
+$(PATH)/crc.o: $(PATH)/crc.c
+	$(CC) $(CFLAGS) -c -o $(PATH)/crc.o $(PATH)/crc.c
 
 # make clean, removes object files and results
 clean:

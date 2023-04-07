@@ -6,6 +6,8 @@
 // include PNG header
 #include "png.h"
 
+#include "crc.h"
+
 /// @brief The MEM_CHECK macro checks if the given pointer is NULL.
 #define MEM_CHECK(ptr) if(ptr == NULL) { printf("Unable to allocate memory");\
                                             return false; }
@@ -172,6 +174,24 @@ bool read_ihdr(PNG* png, FILE* file, int length) {
     }
     png->ihdr->crc[4] = '\0';
 
+    unsigned char* data = malloc(17);
+    memcpy(data, IHDR_HEADER, 4);
+    memcpy(data + 4, png->ihdr->width, 4);
+    memcpy(data + 8, png->ihdr->height, 4);
+    memcpy(data + 12, png->ihdr->bit_depth, 1);
+    memcpy(data + 13, png->ihdr->color_type, 1);
+    memcpy(data + 14, png->ihdr->compression_method, 1);
+    memcpy(data + 15, png->ihdr->filter_method, 1);
+    memcpy(data + 16, png->ihdr->interlace_method, 1);
+    unsigned char* calc_crc = (unsigned char*) &crc(data, 17);
+
+    for(int i = 0; i < 4; i++) {
+        if(png->ihdr->crc[i] != calc_crc[3 - i]) {
+            printf("Invalid PNg: Failed CRC Check");
+            return false;
+        }
+    }
+
     return true;
 }
 
@@ -209,6 +229,20 @@ bool read_plte(PNG* png, FILE* file, int length) {
         FEOF_CHECK(file);
     }
     png->plte->crc[4] = '\0';
+
+    unsigned char* data = malloc(7);
+    memcpy(data, PLTE_HEADER, 4);
+    memcpy(data + 4, png->plte->red, 1);
+    memcpy(data + 5, png->plte->green, 1);
+    memcpy(data + 6, png->plte->blue, 1);
+    unsigned char* calc_crc = (unsigned char*) &crc(data, 7);
+
+    for(int i = 0; i < 4; i++) {
+        if(png->plte->crc[i] != calc_crc[3 - i]) {
+            printf("Invalid PNG: Failed CRC Check");
+            return false;
+        }
+    }
 
     return true;
 }
@@ -249,6 +283,18 @@ bool read_idat(PNG* png, FILE* file, int length) {
     }
     png->idat->crc[4] = '\0';
 
+    unsigned char* data = malloc(length + 4);
+    memcpy(data, &IDAT_HEADER, 4);
+    memcpy(data + 4, png->idat->data, length);
+    unsigned char* calc_crc = (unsigned char*) &crc(data, length = 4);
+
+    for(int i = 0; i < 4; i++) {
+        if(calc_crc[3 - i] != png->idat->crc[i]) {
+            printf("Invalid PNG: Failed CRC Check");
+            return false;
+        }
+    }
+
     return true;
 }
 
@@ -267,6 +313,11 @@ bool read_iend(PNG* png, FILE* file) {
         FEOF_CHECK(file);
     }
     png->iend->crc[4] = '\0';
+    
+    if(strcmp(png->iend->crc, "\xAE\x42\x60\x82") != 0) {
+        printf("Invalid PNG: Failed CRC Check");
+        return false;
+    }
 
     return true;
 }

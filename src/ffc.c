@@ -154,13 +154,13 @@ int main(int argc, char** argv) {
     JPEG* jpeg;
 
     // read the file as the appropriate format
-    if(strcmp(extension, ".png") == 0) {
+    if(strcmp(extension, "png") == 0) {
         png = png_create();
         if(!png_read(png, start_file)) {
             printf("Error: Unable to read PNG file.\n");
             return EXIT_FAILURE;
         }
-    } else if(strcmp(extension, ".jpeg") == 0 || strcmp(extension, ".jpg")) {
+    } else if(strcmp(extension, "jpeg") == 0 || strcmp(extension, "jpg") == 0) {
         jpeg = jpeg_create();
         if(!jpeg_read(jpeg, start_file)) {
             printf("Error: Unable to read JPEG file.\n");
@@ -169,14 +169,14 @@ int main(int argc, char** argv) {
     }
 
     // write the file as the appropriate format
-    if(strcmp(end_extension, ".png") == 0) {
+    if(strcmp(end_extension, "png") == 0) {
         end_file = fopen(end_filename, "w");
         if(!png_write(png, end_file)) {
             printf("Error: Unable to write PNG file.\n");
             return EXIT_FAILURE;
         }
         png_free(png);
-    } else if(strcmp(end_extension, ".jpeg") == 0 || strcmp(end_extension, ".jpg")) {
+    } else if(strcmp(end_extension, "jpeg") == 0 || strcmp(end_extension, "jpg") == 0) {
         end_file = fopen(end_filename, "w");
         if(!jpeg_write(jpeg, end_file)) {
             printf("Error: Unable to write JPEG file.\n");

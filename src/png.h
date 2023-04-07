@@ -24,7 +24,7 @@
 typedef struct {
     unsigned int width;
     unsigned int height;
-    unsigned int bit_depth;
+    unsigned char bit_depth;
     unsigned char color_type;
     unsigned char compression_method;
     unsigned char filter_method;
